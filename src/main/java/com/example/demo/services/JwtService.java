@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.models.Usuario;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -29,12 +30,13 @@ public class JwtService {
         if (secretCode == null || secretCode.trim().isEmpty()) {
             throw new IllegalStateException("JWT_SECRET must be configured in application.properties");
         }
-        jwtSecret = Keys.hmacShaKeyFor(secretCode.getBytes(StandardCharsets.UTF_8));
+
+        this.jwtSecret = Keys.hmacShaKeyFor(secretCode.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateJwtToken(Usuario usuario) {
         return Jwts.builder()
-                .setSubject(usuario.getEmail())
+                .setSubject(usuario.getEmail()) 
                 .claim("rol", usuario.getRol())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
@@ -59,5 +61,31 @@ public class JwtService {
             return authHeader.substring(7);
         }
         return null;
+    }
+
+    public String getEmailFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.getSubject();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String getRolFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.get("rol", String.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
